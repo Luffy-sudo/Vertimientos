@@ -1,0 +1,52 @@
+---
+title: "Registro_Vertimientos_Suelo"
+author: "Mateo Vallejo"
+date: "2026-05-08"
+output: html_document
+---
+
+Registro de vertimientos al suelo de los usuarios del recurso hídrico en la jurisdicción de Corantioquia.
+<https://www.datos.gov.co/Ambiente-y-Desarrollo-Sostenible/Registro-de-vertimientos-al-suelo/e5yb-6ae7/about_data>.
+
+## Ficha Técnica
+
+| Concepto | Descripción |
+|:---|:---|
+| **Población** | Vertimientos al suelo de los usuarios del recurso hídrico en la jurisdicción de Corantioquia periodo 2020-2026 |
+| **Tamaño de la población** | 7129 vertimientos |
+| **Cobertura** | Periodo 2020-2026 |
+| **Variable Aleatoria de Rigor o de Peso** | Nivel de tratamiento |
+| **Nivel de confianza** | Porcentaje asociado a la confianza |
+| **Error de muestreo** | Error permitido en la estimación de los parámetros de interés |
+| **Tamaño de muestra** | Tener presente las expresiones de cálculo de tamaño de muestras |
+| **Técnica de muestreo** | Justificar la técnica de muestreo a utilizar |
+
+```{r cargar-datos, warning=FALSE, message=FALSE}
+
+# Cargar librería
+library(dplyr)
+
+# Cargar datos
+Datos <- read.csv("Datos.csv")
+
+# Crear variable ordinal
+Datos <- Datos %>%
+  mutate(
+    Tratamiento_secundario_ordinal = case_when(
+      Tratamiento.secundario == "No registra" ~ 0,
+      Tratamiento.secundario == "Sedimentación" ~ 1,
+      Tratamiento.secundario == "Tanque septico" ~ 2,
+      Tratamiento.secundario == "Filtro anaerobio" ~ 3
+    )
+  )
+
+# Verificar resultados
+table(
+  Datos$Tratamiento.secundario,
+  Datos$Tratamiento_secundario_ordinal
+)
+
+# Histograma
+hist(Datos$Tratamiento_secundario_ordinal)
+
+```
