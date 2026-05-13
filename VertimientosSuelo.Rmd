@@ -102,28 +102,31 @@ knitr::kable(
   head(muestra_lhs, 10),
   caption = "Primeros registros de la muestra LHS"
 )
+```
 
-# Tablas de Distribución de Frecuencias
+## Tablas de distribución de frecuencias
 
-# Variable Cuencua
+```{r tablas-frecuencia, warning=FALSE, message=FALSE}
 
-Datos <- read.csv("Datos.csv")
+# =========================
+# VARIABLE CUENCA
+# =========================
 
 freq <- table(muestra_lhs$Cuenca)
 
-Tabla_frecuencia <- data.frame(
+tabla_cuenca <- data.frame(
   Cuenca = names(freq),
   Frecuencia = as.vector(freq),
-  hi.Freq =  round(as.vector(prop.table(freq)), 3),
+  hi.Freq = round(as.vector(prop.table(freq)), 3),
   Porcentaje.Freq = round(as.vector(prop.table(freq)) * 100, 2)
 )
 
-colnames(Tabla_frecuencia)[1] <- "Cuenca"
-
 knitr::kable(
-  Tabla_frecuencia,
+  tabla_cuenca,
   caption = "Tabla de frecuencias de la variable Cuenca"
 )
+
+# Gráfico de barras
 
 barplot(
   sort(freq),
@@ -135,38 +138,216 @@ barplot(
   xlab = "Frecuencia"
 )
 
-# Variable Manejo efluente
+# =========================
+# VARIABLE MANEJO EFLUENTE
+# =========================
+
 freq <- table(muestra_lhs$Manejo.efluente)
 
-Tabla_frecuencia <- data.frame(
+tabla_efluente <- data.frame(
   Manejo_efluente = names(freq),
   Frecuencia = as.vector(freq),
-  hi.Freq =  round(as.vector(prop.table(freq)), 3),
+  hi.Freq = round(as.vector(prop.table(freq)), 3),
   Porcentaje.Freq = round(as.vector(prop.table(freq)) * 100, 2)
 )
 
-colnames(Tabla_frecuencia)[1] <- "Manejo_efluente"
-
 knitr::kable(
-  Tabla_frecuencia,
+  tabla_efluente,
   caption = "Tabla de frecuencias de la variable Manejo efluente"
 )
 
-# Variable Tratamiento Secundario
+# =========================
+# VARIABLE TRATAMIENTO SECUNDARIO
+# =========================
 
 freq <- table(muestra_lhs$Tratamiento.secundario)
 
-Tabla_frecuencia <- data.frame(
+tabla_tratamiento <- data.frame(
   Tratamiento_secundario = names(freq),
   Frecuencia = as.vector(freq),
-  hi.Freq =  round(as.vector(prop.table(freq)), 3),
+  hi.Freq = round(as.vector(prop.table(freq)), 3),
   Porcentaje.Freq = round(as.vector(prop.table(freq)) * 100, 2)
 )
 
-colnames(Tabla_frecuencia)[1] <- "Tratamiento_secundario"
-
 knitr::kable(
-  Tabla_frecuencia,
+  tabla_tratamiento,
   caption = "Tabla de frecuencias de la variable Tratamiento Secundario"
 )
+
+# =========================
+# TABLA NO AGRUPADA - PERMANENTES
+# =========================
+
+freq_perm <- table(muestra_lhs$Permanentes)
+
+tabla_perm <- data.frame(
+  Permanentes = names(freq_perm),
+  Frecuencia = as.vector(freq_perm),
+  hi.Freq = round(as.vector(prop.table(freq_perm)), 3),
+  Porcentaje = round(as.vector(prop.table(freq_perm)) * 100, 2)
+)
+
+knitr::kable(
+  tabla_perm,
+  caption = "Tabla de frecuencias no agrupada - Permanentes"
+)
+
+hist(
+  muestra_lhs$Permanentes,
+  main = "Histograma de Permanentes",
+  xlab = "Permanentes",
+  ylab = "Frecuencia",
+  col = "lightblue",
+  breaks = seq(
+    min(muestra_lhs$Permanentes) - 0.5,
+    max(muestra_lhs$Permanentes) + 0.5,
+    by = 1
+  )
+)
+
+# =========================
+# TABLA NO AGRUPADA - TRANSITORIAS
+# =========================
+
+freq_trans <- table(muestra_lhs$Transitorias)
+
+tabla_trans <- data.frame(
+  Transitorias = names(freq_trans),
+  Frecuencia = as.vector(freq_trans),
+  hi.Freq = round(as.vector(prop.table(freq_trans)), 3),
+  Porcentaje = round(as.vector(prop.table(freq_trans)) * 100, 2)
+)
+
+knitr::kable(
+  tabla_trans,
+  caption = "Tabla de frecuencias no agrupada - Transitorias"
+)
+
+hist(
+  muestra_lhs$Transitorias,
+  main = "Histograma de Transitorias",
+  xlab = "Transitorias",
+  ylab = "Frecuencia",
+  col = "lightgreen",
+  breaks = seq(
+    min(muestra_lhs$Transitorias) - 0.5,
+    max(muestra_lhs$Transitorias) + 0.5,
+    by = 1
+  )
+)
+
+# =========================
+# TABLA AGRUPADA - CAUDAL
+# =========================
+
+muestra_lhs$Caudal <- as.numeric(
+  gsub(",", ".", as.character(muestra_lhs$Caudal))
+)
+
+# Número de intervalos según Sturges
+k <- nclass.Sturges(muestra_lhs$Caudal)
+
+# Crear intervalos
+clases <- cut(
+  muestra_lhs$Caudal,
+  breaks = k
+)
+
+# Tabla de frecuencias agrupadas
+tabla_caudal <- data.frame(
+  Intervalo = names(table(clases)),
+  Frecuencia = as.vector(table(clases)),
+  hi.Freq = round(
+    as.vector(prop.table(table(clases))),
+    3
+  ),
+  Porcentaje = round(
+    as.vector(prop.table(table(clases))) * 100,
+    2
+  )
+)
+
+knitr::kable(
+  tabla_caudal,
+  caption = "Tabla de frecuencia agrupada - Caudal"
+)
+
+# Histograma
+hist(
+  muestra_lhs$Caudal,
+  breaks = "Sturges",
+  col = "lightblue",
+  main = "Histograma de Caudal",
+  xlab = "Caudal"
+)
 ```
+
+## Medidas de Tendencia Central
+
+```{r tendencia-caudal}
+
+# Convertir a numérico
+muestra_lhs$Caudal <- as.numeric(
+  gsub(",", ".", as.character(muestra_lhs$Caudal))
+)
+
+# Moda
+moda_caudal <- as.numeric(
+  names(sort(table(muestra_lhs$Caudal),
+  decreasing = TRUE)[1])
+)
+
+# Tabla
+tendencia_caudal <- data.frame(
+  Media = mean(muestra_lhs$Caudal, na.rm = TRUE),
+  Mediana = median(muestra_lhs$Caudal, na.rm = TRUE),
+  Moda = moda_caudal
+)
+
+knitr::kable(
+  tendencia_caudal,
+  caption = "Medidas de tendencia central - Caudal"
+)
+
+```
+
+```{r tendencia-permanentes}
+
+moda_perm <- as.numeric(
+  names(sort(table(muestra_lhs$Permanentes),
+  decreasing = TRUE)[1])
+)
+
+tendencia_perm <- data.frame(
+  Media = mean(muestra_lhs$Permanentes, na.rm = TRUE),
+  Mediana = median(muestra_lhs$Permanentes, na.rm = TRUE),
+  Moda = moda_perm
+)
+
+knitr::kable(
+  tendencia_perm,
+  caption = "Medidas de tendencia central - Permanentes"
+)
+
+```
+
+```{r tendencia-transitorias}
+
+moda_trans <- as.numeric(
+  names(sort(table(muestra_lhs$Transitorias),
+  decreasing = TRUE)[1])
+)
+
+tendencia_trans <- data.frame(
+  Media = mean(muestra_lhs$Transitorias, na.rm = TRUE),
+  Mediana = median(muestra_lhs$Transitorias, na.rm = TRUE),
+  Moda = moda_trans
+)
+
+knitr::kable(
+  tendencia_trans,
+  caption = "Medidas de tendencia central - Transitorias"
+)
+
+```
+
