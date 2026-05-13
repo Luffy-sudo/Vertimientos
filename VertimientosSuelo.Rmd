@@ -15,38 +15,158 @@ Registro de vertimientos al suelo de los usuarios del recurso hídrico en la jur
 | **Población** | Vertimientos al suelo de los usuarios del recurso hídrico en la jurisdicción de Corantioquia periodo 2020-2026 |
 | **Tamaño de la población** | 7129 vertimientos |
 | **Cobertura** | Periodo 2020-2026 |
-| **Variable Aleatoria de Rigor o de Peso** | Nivel de tratamiento |
-| **Nivel de confianza** | Porcentaje asociado a la confianza |
-| **Error de muestreo** | Error permitido en la estimación de los parámetros de interés |
-| **Tamaño de muestra** | Tener presente las expresiones de cálculo de tamaño de muestras |
-| **Técnica de muestreo** | Justificar la técnica de muestreo a utilizar |
+| **Variable Aleatoria de Rigor o de Peso** | Caudal |
+| **Nivel de confianza** | 95%. Nivel de confianza utilizado para que los intervalos estimados representen adecuadamente el comportamiento poblacional del caudal |
+| **Error de muestreo** | 10%. Margen de error permitido en la estimación de los parámetros de interés asociados a la variable Caudal. |
+| **Tamaño de muestra** | 85 vertimientos seleccionados a partir de la población total de 7129 registros. |
+| **Técnica de muestreo** | Muestreo por Hipercubo Latino (Latin Hypercube Sampling - LHS), aplicado sobre la variable continua *Caudal* con el fin de garantizar una representación homogénea de todo el rango de variación de la variable, reduciendo la concentración excesiva de observaciones en zonas de alta densidad y mejorando la cobertura de valores extremos y medianos. |
 
 ```{r cargar-datos, warning=FALSE, message=FALSE}
-
-# Cargar librería
 library(dplyr)
+library(fitdistrplus)
+library(lhs)
 
-# Cargar datos
-Datos <- read.csv("Datos.csv")
+# Cargar y limpiar datos
+Datos <- read.csv("Datos.csv") %>% 
+  filter(!is.na(Caudal), Caudal >= 0)
 
-# Crear variable ordinal
-Datos <- Datos %>%
-  mutate(
-    Tratamiento_secundario_ordinal = case_when(
-      Tratamiento.secundario == "No registra" ~ 0,
-      Tratamiento.secundario == "Sedimentación" ~ 1,
-      Tratamiento.secundario == "Tanque septico" ~ 2,
-      Tratamiento.secundario == "Filtro anaerobio" ~ 3
-    )
-  )
+# Transformación logarítmica
+Datos$valor_log <- log1p(Datos$Caudal)
 
-# Verificar resultados
-table(
-  Datos$Tratamiento.secundario,
-  Datos$Tratamiento_secundario_ordinal
+# Comparación visual
+par(mfrow=c(1,2))
+
+hist(Datos$Caudal,
+     main="Caudal Original",
+     col="red",
+     xlab="m3/s")
+
+hist(Datos$valor_log,
+     main="Caudal Log-Transformado",
+     col="blue",
+     xlab="log(m3/s)")
+
+# Ajuste normal sobre log-transformación
+fn <- fitdist(Datos$valor_log, "norm")
+
+plot(fn)
+
+# Cullen y Frey
+par(mfrow = c(1, 2))
+
+descdist(Datos$Caudal,
+         boot = 100,
+         method = "unbiased",
+         graph = TRUE)
+
+title(sub = "Original (Caudal)")
+
+descdist(Datos$valor_log,
+         boot = 100,
+         method = "unbiased",
+         graph = TRUE)
+
+title(sub = "Transformación Log")
+
+par(mfrow = c(1,1))
+```
+
+# Distribución lognormal
+
+```{r, echo=FALSE, out.width="70%", fig.align="center"}
+knitr::include_graphics("lognormal.jpg")
+```
+
+```{r muestreo-lhs, warning=FALSE, message=FALSE}
+
+# Muestreo Hipercubo Latino
+set.seed(123)
+
+caudal <- Datos$Caudal
+
+lhs <- randomLHS(85, 1)
+
+valores_lhs <- quantile(caudal, probs = lhs[,1])
+
+indices <- sapply(valores_lhs, function(x) {
+  which.min(abs(caudal - x))
+})
+
+muestra_lhs <- Datos[indices, ]
+
+nrow(muestra_lhs)
+
+summary(muestra_lhs$Caudal)
+
+knitr::kable(
+  head(muestra_lhs, 10),
+  caption = "Primeros registros de la muestra LHS"
 )
 
-# Histograma
-hist(Datos$Tratamiento_secundario_ordinal)
+# Tablas de Distribución de Frecuencias
 
+# Variable Cuencua
+
+Datos <- read.csv("Datos.csv")
+
+freq <- table(muestra_lhs$Cuenca)
+
+Tabla_frecuencia <- data.frame(
+  Cuenca = names(freq),
+  Frecuencia = as.vector(freq),
+  hi.Freq =  round(as.vector(prop.table(freq)), 3),
+  Porcentaje.Freq = round(as.vector(prop.table(freq)) * 100, 2)
+)
+
+colnames(Tabla_frecuencia)[1] <- "Cuenca"
+
+knitr::kable(
+  Tabla_frecuencia,
+  caption = "Tabla de frecuencias de la variable Cuenca"
+)
+
+barplot(
+  sort(freq),
+  horiz = TRUE,
+  las = 1,
+  cex.names = 0.3,
+  col = "lightblue",
+  main = "Frecuencia de la variable Cuenca",
+  xlab = "Frecuencia"
+)
+
+# Variable Manejo efluente
+freq <- table(muestra_lhs$Manejo.efluente)
+
+Tabla_frecuencia <- data.frame(
+  Manejo_efluente = names(freq),
+  Frecuencia = as.vector(freq),
+  hi.Freq =  round(as.vector(prop.table(freq)), 3),
+  Porcentaje.Freq = round(as.vector(prop.table(freq)) * 100, 2)
+)
+
+colnames(Tabla_frecuencia)[1] <- "Manejo_efluente"
+
+knitr::kable(
+  Tabla_frecuencia,
+  caption = "Tabla de frecuencias de la variable Manejo efluente"
+)
+
+# Variable Tratamiento Secundario
+
+freq <- table(muestra_lhs$Tratamiento.secundario)
+
+Tabla_frecuencia <- data.frame(
+  Tratamiento_secundario = names(freq),
+  Frecuencia = as.vector(freq),
+  hi.Freq =  round(as.vector(prop.table(freq)), 3),
+  Porcentaje.Freq = round(as.vector(prop.table(freq)) * 100, 2)
+)
+
+colnames(Tabla_frecuencia)[1] <- "Tratamiento_secundario"
+
+knitr::kable(
+  Tabla_frecuencia,
+  caption = "Tabla de frecuencias de la variable Tratamiento Secundario"
+)
 ```
