@@ -1,17 +1,29 @@
 ---
-title: "Registro_Vertimientos_Suelo"
-author: "Mateo Vallejo"
+title: "*[Registro de Vertimientos al suelo de los usuarios del recurso hídrico en la jurisdicción de Corantioquia periodo 2020-2026](https://www.datos.gov.co/Ambiente-y-Desarrollo-Sostenible/Registro-de-vertimientos-al-suelo/e5yb-6ae7/about_data)*"
+author: 
+  - "Mateo Vallejo"
+  - "Melliza Paternina" 
+  - "Esteban Avendaño Del Toro"
+  - "Manuela Cano"
+  - "Jennifer Caicedo Sanmartín"
 date: "2026-05-08"
+fontsize: 12pt
 output:
-  
-  html_document: default
-  pdf_document: default
+  pdf_document:
+    toc: true
+    number_sections: true
+    latex_engine: xelatex  # Obligatorio para que reconozca "mainfont"
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    theme: cosmo
 header-includes:
   - \usepackage{float}
+  - \usepackage{mathptmx}
+  - \renewcommand{\familydefault}{\sfdefault}
 ---
-
-Registro de vertimientos al suelo de los usuarios del recurso hídrico en la jurisdicción de Corantioquia.
-<https://www.datos.gov.co/Ambiente-y-Desarrollo-Sostenible/Registro-de-vertimientos-al-suelo/e5yb-6ae7/about_data>.
+\newpage
 
 ## *Ficha Técnica*
 
@@ -27,7 +39,10 @@ Registro de vertimientos al suelo de los usuarios del recurso hídrico en la jur
 | **Técnica de muestreo** | Muestreo por Hipercubo Latino (Latin Hypercube Sampling - LHS), aplicado sobre la variable continua *Caudal* con el fin de garantizar una representación homogénea de todo el rango de variación de la variable, reduciendo la concentración excesiva de observaciones en zonas de alta densidad y mejorando la cobertura de valores extremos y medianos. |
 
 \newpage
-```{r cargar-datos, warning=FALSE, message=FALSE}
+
+
+
+```{r cargar-datos, warning=FALSE, message=FALSE, include=TRUE}
 library(dplyr)
 library(fitdistrplus)
 library(lhs)
@@ -44,8 +59,20 @@ boxplot(
   col = "lightblue",
   main = "Boxplot del Caudal"
 )
+```
 
+La gran mayoría de los datos de Caudal están concentrados en valores muy bajos (cercanos a 0.01 o 0.02), mientras que la distribución se estira significativamente hacia la derecha debido a la presencia de valores inusualmente altos. En condiciones normales o en la mayor parte del tiempo, el caudal se mantiene en un rango de valores muy pequeño y controlado.
 
+# *Distribución lognormal*
+
+```{r, echo=FALSE, out.width="70%", fig.align="center"}
+knitr::include_graphics("lognormal.jpg")
+```
+La variable Caudal presenta una fuerte asimetría positiva, caracterizada por una alta concentración de valores cercanos a cero y pocos valores extremos elevados. Debido a este comportamiento, se evaluó la compatibilidad de la variable con una distribución log-normal mediante una transformación logarítmica. Aunque visualmente los histogramas original y transformado presentan diferencias moderadas, el análisis de asimetría, curtosis y ajuste probabilístico inicialmente indica que la distribución log-normal constituye un modelo apropiado para representar el comportamiento del caudal.
+
+\newpage
+
+```{r trasnformación-datos, warning=FALSE, message=FALSE}
 # Transformación logarítmica
 Datos$valor_log <- log1p(Datos$Caudal)
 
@@ -62,11 +89,11 @@ hist(Datos$valor_log,
      col="blue",
      xlab="log(m3/s)")
 
-# Ajuste normal sobre log-transformación
-fn <- fitdist(Datos$valor_log, "norm")
+```
 
-plot(fn)
+\newpage
 
+```{r Cullen&Fray, warning=FALSE, message=FALSE}
 
 # Cullen y Frey
 par(mfrow = c(1, 2))
@@ -87,16 +114,16 @@ title(sub = "Transformación Log")
 
 par(mfrow = c(1,1))
 ```
+Las herramientas de diagnóstico de Cullen & Frey confirman que la transformación logarítmica es insuficiente para absorber la magnitud de la curtosis y asimetría remanentes.
+Los datos reales exhiben un comportamiento de cola pesada superior al que la distribución Lognormal puede predecir matemáticamente.
+
 
 \newpage
-# *Distribución lognormal*
 
-```{r, echo=FALSE, out.width="70%", fig.align="center"}
-knitr::include_graphics("lognormal.jpg")
-```
-La variable Caudal presenta una fuerte asimetría positiva, caracterizada por una alta concentración de valores cercanos a cero y pocos valores extremos elevados. Debido a este comportamiento, se evaluó la compatibilidad de la variable con una distribución log-normal mediante una transformación logarítmica. Aunque visualmente los histogramas original y transformado presentan diferencias moderadas, el análisis de asimetría, curtosis y ajuste probabilístico indica que la distribución log-normal constituye un modelo apropiado para representar el comportamiento del caudal.
-\newpage
+# *Tabla de entrada de datos*
 ```{r muestreo-lhs, warning=FALSE, message=FALSE}
+library(knitr)
+library(kableExtra)
 
 # Muestreo Hipercubo Latino
 set.seed(123)
@@ -117,14 +144,21 @@ nrow(muestra_lhs)
 
 summary(muestra_lhs$Caudal)
 
-knitr::kable(
+kable(
   head(muestra_lhs, 10),
+  format = "latex", # Forzamos el formato para PDF
+  booktabs = TRUE,  # Le da un acabado lineal más limpio y profesional
   caption = "Primeros registros de la muestra LHS"
-)
+) %>%
+  kable_styling(
+    latex_options = c("scale_down", "striped", "HOLD_position")
+  )
 ```
 Se utilizó el método de muestreo por Hipercubo Latino debido a que la variable de rigor seleccionada (*Caudal*), presenta comportamiento continuo, alta dispersión y asimetría positiva. Este método permite garantizar una representación homogénea de toda la distribución de la variable, evitando la concentración excesiva de observaciones en rangos de alta densidad y mejorando la cobertura de valores extremos. En comparación con el muestreo aleatorio simple, el muestreo por Hipercubo Latino proporciona mayor eficiencia en la exploración del espacio muestral y una mejor representatividad estadística de la variabilidad del caudal.
 
-## *Tablas de distribución de frecuencias*
+\newpage
+
+# *Tablas de distribución de frecuencias variables cualitativas y cuantitativas + Gráficos* 
 
 ```{r tablas-frecuencia, warning=FALSE, message=FALSE}
 
@@ -302,7 +336,8 @@ hist(
 )
 ```
 \newpage
-## *Medidas de Tendencia Central*
+
+# *Medidas de Tendencia Central variables cuantitativas*
 
 ```{r tendencia-caudal}
 
@@ -330,7 +365,7 @@ knitr::kable(
 )
 
 ```
-
+\newpage
 ```{r tendencia-permanentes}
 
 moda_perm <- as.numeric(
@@ -370,8 +405,9 @@ knitr::kable(
 )
 
 ```
+\newpage
 
-## *Análisis de simetría* 
+# *Análisis de simetría* 
 ```{r análisis de Simetría Caudal}
 
 library(moments)
@@ -428,16 +464,16 @@ knitr::kable(
   caption = "Coeficiente de asimetría - Transitorias"
 )
 ```
-Este coeficiente de asimetría sugiere que la mayoría de los domicilios registran pocas personas transitorias, mientras que algunos casos excepcionales presentan cantidades elevadas, generando una cola pronunciada hacia los valores altos.
+Este coeficiente de asimetría sugiere que la mayoría de los domicilios registran pocas personas transitorias, mientras que algunos casos excepcionales presentan cantidades elevadas, generando una cola pronunciada hacia los valores altos.<br><br/>
 
 En términos sociales/demográficos esto puede indicar:
 
-* Cierta estabilidad en el número de habitantes permanentes pero mucha variabilidad en la población transitoria, posiblemente asociada a: actividades temporales, movilidad poblacional o usos ocasionales de los predios.
+* Cierta estabilidad en el número de habitantes permanentes pero mucha variabilidad en la población transitoria, posiblemente asociada a: actividades temporales, movilidad poblacional o usos ocasionales de los predios.<br><br/>
 
 En cuanto a la relación de estas variables con la normalidad, estas se alejan de una simetría normal, especialmente la variable *Transitorias*, la media puede verse afectada por valores extremos, y la mediana puede representar mejor el comportamiento típico de los datos.
 
 
-## *Análisis de Regla Empírica*
+# *Análisis de Regla Empírica*
 
 ```{r regla-empirica-caudal}
 
@@ -476,7 +512,199 @@ knitr::kable(
 )
 
 ```
+\newpage
 Después de aplicar la transformación logarítmica a la variable *Caudal*, la distribución presentó un comportamiento más cercano a la normalidad. La regla empírica mostró porcentajes de 76.47%, 96.47% y 98.92% dentro de una, dos y tres desviaciones estándar respectivamente, valores relativamente próximos a los esperados bajo una distribución normal. Esto indica que la transformación redujo significativamente la asimetría positiva y el efecto de valores extremos presentes en la distribución original.
 
 
+# *Medidas de Variación*
 
+
+```{r Medidas de Variación *Caudal*}
+
+medidas_variacion <- function(x){
+
+  data.frame(
+    Rango = max(x, na.rm = TRUE) -
+             min(x, na.rm = TRUE),
+
+    Varianza = var(x, na.rm = TRUE),
+
+    Desviacion_Estandar = sd(x, na.rm = TRUE),
+
+    Coeficiente_Variacion =
+      (sd(x, na.rm = TRUE) /
+       mean(x, na.rm = TRUE)) * 100
+  )
+}
+
+```
+
+
+```{r Medidas de Variación Output}
+
+medidas_variacion(muestra_lhs$Permanentes)
+
+medidas_variacion(muestra_lhs$Transitorias)
+
+medidas_variacion(muestra_lhs$Caudal)
+
+```
+
+Las medidas de variación evidencian que las tres variables cuantitativas presentan dispersión significativa. La variable *Transitorias* mostró la mayor heterogeneidad, con un coeficiente de variación superior al 100%, indicando alta dispersión relativa y presencia de valores extremos. Por su parte, las variables *Permanentes* y *Caudal* presentaron variabilidad moderada-alta, reflejando diferencias importantes entre los registros analizados.
+
+
+# *Cruce de variables Cualitativas*
+```{r contingencia-cuenca-tratamiento, warning=FALSE, message=FALSE}
+
+library(ggplot2)
+
+tabla_ct <- table(
+  muestra_lhs$Cuenca,
+  muestra_lhs$Tratamiento.secundario
+)
+
+knitr::kable(
+  tabla_ct,
+  caption = "Tabla de contingencia: Cuenca vs Tratamiento Secundario"
+)
+
+ggplot(
+  muestra_lhs,
+  aes(
+    x = Cuenca,
+    fill = Tratamiento.secundario
+  )
+) +
+  geom_bar() +
+  labs(
+    title = "Cuenca vs Tratamiento Secundario",
+    x = "Cuenca",
+    y = "Frecuencia",
+    fill = "Tratamiento secundario"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 90,
+      hjust = 1,
+      size = 7
+    ),
+    plot.title = element_text(
+      hjust = 0.5,
+      face = "bold"
+    )
+  )
+
+```
+
+Se observa una mayor presencia de filtros anaerobios en cuencas vinculadas al sistema hídrico del río Medellín-Aburrá, lo cual podría estar relacionado con mayores requerimientos de tratamiento de aguas residuales en áreas urbanas y periurbanas. Esta tendencia sugiere una posible influencia de factores como densidad poblacional, presión ambiental y control institucional sobre la selección de tecnologías de tratamiento utilizadas en los vertimientos al suelo.
+
+
+```{r contingencia-cuenca-manejo_efluente, warning=FALSE, message=FALSE}
+
+tabla_ce <- table(
+  muestra_lhs$Cuenca,
+  muestra_lhs$Manejo.efluente
+)
+
+knitr::kable(
+  tabla_ce,
+  caption = "Tabla de contingencia: Cuenca vs Manejo Efluente"
+)
+
+
+ggplot(
+  muestra_lhs,
+  aes(
+    x = Cuenca,
+    fill = Manejo.efluente
+  )
+) +
+  geom_bar() +
+  labs(
+    title = "Cuenca vs Manejo Efluente",
+    x = "Cuenca",
+    y = "Frecuencia",
+    fill = "Manejo efluente"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 90,
+      hjust = 1,
+      size = 7
+    ),
+    plot.title = element_text(
+      hjust = 0.5,
+      face = "bold"
+    )
+  )
+
+```
+
+El sistema más común de disposición final del Efluente es la infiltración al suelo, probablemente porque es más práctico y económico en zonas rurales o periurbanas. Las cuencas donde predominan los pozos de absorción como sistema de disposición final del Efluente posiblemente presentan condiciones de suelo favorables para la infiltración vertical, menor disponibilidad de espacio superficial o sistemas individuales más simples. Por último, se evidencia que el sistema tipo Montículo es muy poco frecuente, esto se debe a que suele utilizarse cuando el suelo no infiltra bien. En cuencas asociadas al sistema hídrico Medellín-Aburrá se observa una mayor presencia de sistemas de infiltración controlada, lo que podría estar relacionado con mayores requerimientos ambientales y condiciones de urbanización en dichas zonas.
+
+\newpage
+
+# *Modelamiento de la variable cuantitativa*
+
+La variable Caudal presenta una fuerte asimetría positiva en su distribución original, característica común en variables ambientales e hidrológicas. Después de aplicar una transformación logarítmica, los datos muestran un comportamiento cercano a una distribución normal, por lo cual se modela el caudal mediante una distribución lognormal.
+
+```{r ModelamientoCaudal, warning=FALSE, message=FALSE}
+# Ajuste lognormal
+
+muestra_lhs$Caudal <- as.numeric(
+  gsub(",", ".", as.character(muestra_lhs$Caudal))
+)
+
+# Transformación logarítmica
+muestra_lhs$log_caudal <- log1p(muestra_lhs$Caudal)
+
+# Ajuste normal sobre log-transformación
+fit_ln <- fitdist(muestra_lhs$log_caudal, "norm")
+
+summary(fit_ln)
+
+plot(fit_ln)
+```
+
+El ajuste de la transformación logarítmica del caudal a una distribución normal indica que la variable original puede modelarse adecuadamente mediante una distribución lognormal. Esto se debe a que el caudal presenta valores pequeños muy frecuentes y pocos valores altos extremos, generando asimetría positiva.
+
+\newpage
+
+# *Dependencia entre variables cualitativas*
+
+## **Hipótesis** <br/><br>
+
+
+### **Hipótesis nula**
+
+                H0: Las variables son independientes
+                
+#### **Hipótesis alternativa**
+    
+                H1: Existe dependencia entre las variables
+                
+```{r PruebaHipostesis, warning=FALSE, message=FALSE}
+
+# Tabla de contingencia
+tabla_cont <- table(
+  muestra_lhs$Cuenca,
+  muestra_lhs$Tratamiento.secundario
+)
+
+tabla_cont
+
+# Prueba Chi-cuadrado
+prueba_chi <- chisq.test(tabla_cont)
+
+prueba_chi
+                
+```
+
+Se aplicó una prueba Chi-cuadrado de independencia entre las variables *Cuenca* y *Tratamiento secundario*. Los resultados permitieron evaluar si la selección del sistema de tratamiento depende de la cuenca hidrográfica asociada al vertimiento. Dado que el valor-p es menor que 0.05, se rechaza la hipótesis nula de independencia, concluyendo que existe una relación estadísticamente significativa entre la cuenca hidrográfica y el tipo de tratamiento secundario implementado en los vertimientos analizados. Debido al alto número de categorías y algunas frecuencias pequeñas, los resultados deben interpretarse con precaución, aunque la evidencia estadística sugiere una asociación clara entre las variables.
+
+# *Conclusiones*
+
+Se evaluó el ajuste de los datos de caudal mediante una distribución Lognormal, una técnica ampliamente respaldada en la literatura hidrológica para variables asimétricas y acotadas en cero. Si bien el modelo describe de forma aceptable el comportamiento del cuerpo central de los datos (condiciones operativas normales de los usuarios), las herramientas de diagnóstico de Cullen & Frey confirman que la transformación logarítmica es insuficiente para absorber la magnitud de la curtosis y asimetría remanentes.
+Los datos reales exhiben un comportamiento de cola pesada superior al que la distribución Lognormal puede predecir matemáticamente. Por lo tanto, emplear este modelo para la toma de decisiones ambientales en la jurisdicción de Corantioquia implicaría subestimar la frecuencia y el impacto de los vertimientos pico extraordinarios (valores superiores a 0.04 y hasta 0.15). Se recomienda explorar modelos de la teoría de valores extremos, como la distribución Generalizada de Pareto (GPD) o una distribución Weibull, para capturar adecuadamente los escenarios de máximo riesgo físico.
