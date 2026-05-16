@@ -2,13 +2,18 @@
 title: "Registro_Vertimientos_Suelo"
 author: "Mateo Vallejo"
 date: "2026-05-08"
-output: html_document
+output:
+  
+  html_document: default
+  pdf_document: default
+header-includes:
+  - \usepackage{float}
 ---
 
 Registro de vertimientos al suelo de los usuarios del recurso hídrico en la jurisdicción de Corantioquia.
 <https://www.datos.gov.co/Ambiente-y-Desarrollo-Sostenible/Registro-de-vertimientos-al-suelo/e5yb-6ae7/about_data>.
 
-## Ficha Técnica
+## *Ficha Técnica*
 
 | Concepto | Descripción |
 |:---|:---|
@@ -21,6 +26,7 @@ Registro de vertimientos al suelo de los usuarios del recurso hídrico en la jur
 | **Tamaño de muestra** | 85 vertimientos seleccionados a partir de la población total de 7129 registros. |
 | **Técnica de muestreo** | Muestreo por Hipercubo Latino (Latin Hypercube Sampling - LHS), aplicado sobre la variable continua *Caudal* con el fin de garantizar una representación homogénea de todo el rango de variación de la variable, reduciendo la concentración excesiva de observaciones en zonas de alta densidad y mejorando la cobertura de valores extremos y medianos. |
 
+\newpage
 ```{r cargar-datos, warning=FALSE, message=FALSE}
 library(dplyr)
 library(fitdistrplus)
@@ -29,6 +35,16 @@ library(lhs)
 # Cargar y limpiar datos
 Datos <- read.csv("Datos.csv") %>% 
   filter(!is.na(Caudal), Caudal >= 0)
+
+# Gráfico de caja y bigotes
+
+boxplot(
+  Datos$Caudal,
+  horizontal = TRUE,
+  col = "lightblue",
+  main = "Boxplot del Caudal"
+)
+
 
 # Transformación logarítmica
 Datos$valor_log <- log1p(Datos$Caudal)
@@ -51,6 +67,7 @@ fn <- fitdist(Datos$valor_log, "norm")
 
 plot(fn)
 
+
 # Cullen y Frey
 par(mfrow = c(1, 2))
 
@@ -71,12 +88,14 @@ title(sub = "Transformación Log")
 par(mfrow = c(1,1))
 ```
 
-# Distribución lognormal
+\newpage
+# *Distribución lognormal*
 
 ```{r, echo=FALSE, out.width="70%", fig.align="center"}
 knitr::include_graphics("lognormal.jpg")
 ```
-
+La variable Caudal presenta una fuerte asimetría positiva, caracterizada por una alta concentración de valores cercanos a cero y pocos valores extremos elevados. Debido a este comportamiento, se evaluó la compatibilidad de la variable con una distribución log-normal mediante una transformación logarítmica. Aunque visualmente los histogramas original y transformado presentan diferencias moderadas, el análisis de asimetría, curtosis y ajuste probabilístico indica que la distribución log-normal constituye un modelo apropiado para representar el comportamiento del caudal.
+\newpage
 ```{r muestreo-lhs, warning=FALSE, message=FALSE}
 
 # Muestreo Hipercubo Latino
@@ -103,8 +122,9 @@ knitr::kable(
   caption = "Primeros registros de la muestra LHS"
 )
 ```
+Se utilizó el método de muestreo por Hipercubo Latino debido a que la variable de rigor seleccionada (*Caudal*), presenta comportamiento continuo, alta dispersión y asimetría positiva. Este método permite garantizar una representación homogénea de toda la distribución de la variable, evitando la concentración excesiva de observaciones en rangos de alta densidad y mejorando la cobertura de valores extremos. En comparación con el muestreo aleatorio simple, el muestreo por Hipercubo Latino proporciona mayor eficiencia en la exploración del espacio muestral y una mejor representatividad estadística de la variabilidad del caudal.
 
-## Tablas de distribución de frecuencias
+## *Tablas de distribución de frecuencias*
 
 ```{r tablas-frecuencia, warning=FALSE, message=FALSE}
 
@@ -281,8 +301,8 @@ hist(
   xlab = "Caudal"
 )
 ```
-
-## Medidas de Tendencia Central
+\newpage
+## *Medidas de Tendencia Central*
 
 ```{r tendencia-caudal}
 
@@ -350,4 +370,113 @@ knitr::kable(
 )
 
 ```
+
+## *Análisis de simetría* 
+```{r análisis de Simetría Caudal}
+
+library(moments)
+
+
+asim_caudal <- skewness(
+  muestra_lhs$Caudal,
+  na.rm = TRUE
+)
+
+tabla_asim_caudal <- data.frame(
+  Asimetria = round(asim_caudal, 3)
+)
+
+knitr::kable(
+  tabla_asim_caudal,
+  caption = "Coeficiente de asimetría - Caudal"
+)
+
+```
+La variable Caudal presenta una fuerte asimetría positiva, esto ya se había observado anteriormente, esta asimetría está caracterizada por una alta concentración de valores cercanos a cero y pocos valores extremos elevados. Debido a este comportamiento, se evaluó la compatibilidad de la variable con una distribución log-normal mediante una transformación logarítmica.
+
+```{r análisis de Simetría Permanentes}
+
+asim_perm <- skewness(
+  muestra_lhs$Permanentes,
+  na.rm = TRUE
+)
+
+tabla_asim_permanentes <- data.frame(
+  Asimetria = round(asim_perm, 3)
+)
+
+knitr::kable(
+  tabla_asim_permanentes,
+  caption = "Coeficiente de asimetría - Permanentes"
+)
+```
+Este coeficiente de asimetría indica que la mayoría de los domicilios poseen un número relativamente bajo de personas permanentes, mientras que un grupo reducido presenta cantidades significativamente mayores, desplazando la distribución hacia la derecha. 
+
+```{r análisis de Simetría Transitorias}
+
+asim_trans <- skewness(
+  muestra_lhs$Transitorias,
+  na.rm = TRUE
+)
+
+tabla_asim_transitorias <- data.frame(
+  Asimetria = round(asim_trans, 3)
+)
+
+knitr::kable(
+  tabla_asim_transitorias,
+  caption = "Coeficiente de asimetría - Transitorias"
+)
+```
+Este coeficiente de asimetría sugiere que la mayoría de los domicilios registran pocas personas transitorias, mientras que algunos casos excepcionales presentan cantidades elevadas, generando una cola pronunciada hacia los valores altos.
+
+En términos sociales/demográficos esto puede indicar:
+
+* Cierta estabilidad en el número de habitantes permanentes pero mucha variabilidad en la población transitoria, posiblemente asociada a: actividades temporales, movilidad poblacional o usos ocasionales de los predios.
+
+En cuanto a la relación de estas variables con la normalidad, estas se alejan de una simetría normal, especialmente la variable *Transitorias*, la media puede verse afectada por valores extremos, y la mediana puede representar mejor el comportamiento típico de los datos.
+
+
+## *Análisis de Regla Empírica*
+
+```{r regla-empirica-caudal}
+
+media <- mean(muestra_lhs$Caudal, na.rm = TRUE)
+desv <- sd(muestra_lhs$Caudal, na.rm = TRUE)
+
+# Intervalos
+int1 <- c(media - desv, media + desv)
+int2 <- c(media - 2*desv, media + 2*desv)
+int3 <- c(media - 3*desv, media + 3*desv)
+
+# Porcentajes observados
+p1 <- mean(
+  muestra_lhs$Caudal >= int1[1] &
+  muestra_lhs$Caudal <= int1[2]
+) * 100
+
+p2 <- mean(
+  muestra_lhs$Caudal >= int2[1] &
+  muestra_lhs$Caudal <= int2[2]
+) * 100
+
+p3 <- mean(
+  muestra_lhs$Caudal >= int3[1] &
+  muestra_lhs$Caudal <= int3[2]
+) * 100
+
+tabla_empirica <- data.frame(
+  Intervalo = c("1 Desv", "2 Desv", "3 Desv"),
+  Porcentaje = round(c(p1, p2, p3), 2)
+)
+
+knitr::kable(
+  tabla_empirica,
+  caption = "Regla empírica - Caudal"
+)
+
+```
+Después de aplicar la transformación logarítmica a la variable *Caudal*, la distribución presentó un comportamiento más cercano a la normalidad. La regla empírica mostró porcentajes de 76.47%, 96.47% y 98.92% dentro de una, dos y tres desviaciones estándar respectivamente, valores relativamente próximos a los esperados bajo una distribución normal. Esto indica que la transformación redujo significativamente la asimetría positiva y el efecto de valores extremos presentes en la distribución original.
+
+
 
